@@ -271,47 +271,7 @@ document.getElementById("modal").style.display="none";
 };
 
 //////////////////////////////////////////////////////
-// COCINA (SIN CAMBIOS)
-//////////////////////////////////////////////////////
-
-onSnapshot(collection(db,"pedidos"),snap=>{
-
-let cont=document.getElementById("avisos");
-cont.innerHTML="";
-
-snap.forEach(d=>{
-let p=d.data();
-
-if(p.estado==="entregado"){
-
-let div=document.createElement("div");
-
-div.innerHTML=`
-🍽️ Mesa ${p.mesa}
-<br><small>${p.fecha}</small>
-
-<ul>
-${p.items.map(i=>`<li>${i.n}</li>`).join("")}
-</ul>
-
-<button class="amarillo">✔ ENTREGAR</button>
-`;
-
-div.querySelector("button").onclick=async()=>{
-await updateDoc(doc(db,"pedidos",d.id),{
-estado:"listo"
-});
-};
-
-cont.appendChild(div);
-}
-
-});
-
-});
-
-//////////////////////////////////////////////////////
-// CAJA (SIN CAMBIOS)
+// CAJA (DETALLADO PRO FINAL)
 //////////////////////////////////////////////////////
 
 onSnapshot(collection(db,"pedidos"),snap=>{
@@ -327,15 +287,40 @@ let p=d.data();
 if(p.estado==="listo"){
 
 if(!mesas[p.mesa]){
-mesas[p.mesa]={total:0,items:[],fecha:p.fecha};
+mesas[p.mesa]={
+total:0,
+items:[],
+fecha:p.fecha
+};
 }
 
-mesas[p.mesa].total+=p.total;
-mesas[p.mesa].items.push(...p.items);
+// sumar total general
+mesas[p.mesa].total += p.total;
+
+// 🔥 detalle correcto de productos
+p.items.forEach(i=>{
+
+let existe = mesas[p.mesa].items.find(x=>x.n === i.n);
+
+if(existe){
+existe.cant = (existe.cant || 1) + 1;
+existe.subtotal = existe.cant * i.p;
+}else{
+mesas[p.mesa].items.push({
+n:i.n,
+p:i.p,
+cant:1,
+subtotal:i.p
+});
 }
 
 });
 
+}
+
+});
+
+// render
 Object.keys(mesas).forEach(m=>{
 
 let d=mesas[m];
@@ -346,10 +331,14 @@ div.className="card";
 div.innerHTML=`
 <h3>💰 Mesa ${m}</h3>
 
-<small>${d.fecha}</small>
+<small>🕒 ${d.fecha}</small>
 
 <ul>
-${d.items.map(i=>`<li>${i.n}</li>`).join("")}
+${d.items.map(i=>`
+<li>
+<b>${i.n}</b> x${i.cant} = $${i.subtotal}
+</li>
+`).join("")}
 </ul>
 
 <h2>Total: $${d.total}</h2>
@@ -372,6 +361,9 @@ estado:"cerrado"
 
 caja.appendChild(div);
 });
+
+});
+
 
 });
 
