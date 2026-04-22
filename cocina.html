@@ -2,114 +2,98 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cocina PRO FINAL</title>
 
 <style>
-body{
- font-family:system-ui;
- background:#020617;
- color:white;
- margin:0;
- padding:10px;
-}
-
-h1{text-align:center}
-
-.card{
- background:#111827;
- padding:10px;
- border-radius:10px;
- margin-bottom:10px;
-}
-
-button{
- width:100%;
- padding:10px;
- margin-top:5px;
- border:none;
- border-radius:8px;
- background:#22c55e;
- color:white;
-}
-
-.rojo{background:#ef4444}
+body{font-family:system-ui;background:#020617;color:white;padding:10px}
+.card{background:#111827;padding:10px;margin:10px 0;border-radius:10px}
+button{width:100%;padding:10px;border:none;border-radius:8px;margin-top:5px;cursor:pointer}
+.verde{background:#22c55e;color:white}
+.rojo{background:#ef4444;color:white}
 </style>
 
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
- getFirestore,
- collection,
- onSnapshot,
- doc,
- updateDoc,
- deleteDoc,
- getDocs
+getFirestore,
+collection,
+onSnapshot,
+doc,
+updateDoc,
+deleteDoc,
+getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAa_bH-T5Uv36eM-dSjasTFzVWp9Iwj0Ps",
-  authDomain: "epsgastronomia-6d1b2.firebaseapp.com",
-  projectId: "epsgastronomia-6d1b2",
-  storageBucket: "epsgastronomia-6d1b2.firebasestorage.app",
-  messagingSenderId: "735621231992",
-  appId: "1:735621231992:web:ac62161644b7377095448d"
+apiKey: "AIzaSyAa_bH-T5Uv36eM-dSjasTFzVWp9Iwj0Ps",
+authDomain: "epsgastronomia-6d1b2.firebaseapp.com",
+projectId: "epsgastronomia-6d1b2"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// 👀 pedidos
-onSnapshot(collection(db,"pedidos"),(snap)=>{
+// 👨‍🍳 mostrar pedidos en cocina
+onSnapshot(collection(db,"pedidos"),snap=>{
 
- let cont=document.getElementById("pedidos");
- cont.innerHTML="";
+let cont=document.getElementById("c");
+cont.innerHTML="";
 
- snap.forEach(d=>{
-  const p=d.data();
+snap.forEach(d=>{
+let p=d.data();
 
-  let div=document.createElement("div");
-  div.className="card";
+if(p.estado==="cerrado") return;
 
-  div.innerHTML=`
-   <h3>🍽️ Mesa ${p.mesa}</h3>
-   <p>${p.items.map(i=>i.nombre).join(", ")}</p>
-   <p>Total: $${p.total}</p>
-  `;
+let div=document.createElement("div");
+div.className="card";
 
-  if(!p.listo){
-    let btn=document.createElement("button");
-    btn.textContent="✔ LISTO";
+// 🚫 SIN PRECIOS
+div.innerHTML=`
+<h3>🍽️ Mesa ${p.mesa}</h3>
 
-    btn.onclick=async()=>{
-      await updateDoc(doc(db,"pedidos",d.id),{
-        listo:true
-      });
-    };
+<ul>
+${(p.items||[]).map(i=>`<li>${i.n}</li>`).join("")}
+</ul>
 
-    div.appendChild(btn);
-  } else {
-    div.innerHTML+="<p>✔ LISTO</p>";
-  }
+<p>🕒 ${p.fecha || ""}</p>
+`;
 
-  cont.appendChild(div);
- });
+if(p.estado==="cocina"){
+let btn=document.createElement("button");
+btn.className="verde";
+btn.innerText="✔ LISTO";
+
+btn.onclick=async()=>{
+await updateDoc(doc(db,"pedidos",d.id),{
+estado:"entregado"
+});
+};
+
+div.appendChild(btn);
+}
+
+if(p.estado==="entregado"){
+div.innerHTML+="<p>✔ LISTO PARA MOZO</p>";
+}
+
+cont.appendChild(div);
+});
 
 });
 
-// 🧹 borrar todo
-window.borrarTodo=async()=>{
- if(!confirm("¿Borrar todo?")) return;
+// 🧹 RESET TOTAL (BORRAR TODO)
+window.resetTodo=async()=>{
 
- const snap=await getDocs(collection(db,"pedidos"));
+if(!confirm("¿Seguro que querés borrar TODOS los pedidos?")) return;
 
- snap.forEach(async(d)=>{
-  await deleteDoc(doc(db,"pedidos",d.id));
- });
+const snap=await getDocs(collection(db,"pedidos"));
 
- alert("Borrado completo");
+snap.forEach(async(d)=>{
+await deleteDoc(doc(db,"pedidos",d.id));
+});
+
+alert("Sistema reseteado ✔");
 };
 
 </script>
@@ -118,11 +102,11 @@ window.borrarTodo=async()=>{
 
 <body>
 
-<h1>👨‍🍳 Cocina PRO FINAL</h1>
+<h1>👨‍🍳 COCINA PRO FINAL</h1>
 
-<button class="rojo" onclick="borrarTodo()">🧹 Borrar todo</button>
+<button class="rojo" onclick="resetTodo()">🧹 RESET SISTEMA</button>
 
-<div id="pedidos"></div>
+<div id="c"></div>
 
 </body>
 </html>
