@@ -33,9 +33,7 @@ cursor:pointer;
 transition:0.2s;
 }
 
-.mesa:active{
-transform:scale(0.97);
-}
+.mesa:active{transform:scale(0.97)}
 
 .mesa.activa{
 background:#22c55e;
@@ -49,47 +47,16 @@ border-radius:10px;
 margin:10px 0;
 }
 
-/* BOTONES PRODUCTOS */
 .azul{
 background:#3b82f6;
 color:white;
 transition:0.2s;
-position:relative;
-overflow:hidden;
 }
 
-.azul:active{
-transform:scale(0.97);
-}
-
-/* 🔥 EFECTO SELECCIONADO */
 .azul.seleccionado{
 background:#22c55e !important;
 box-shadow:0 0 12px rgba(34,197,94,0.7);
-transform:scale(1.03);
 }
-
-/* efecto click ripple */
-.azul::after{
-content:"";
-position:absolute;
-width:0;
-height:0;
-background:rgba(255,255,255,0.3);
-border-radius:50%;
-top:50%;
-left:50%;
-transform:translate(-50%,-50%);
-transition:width 0.4s, height 0.4s;
-}
-
-.azul:active::after{
-width:200px;
-height:200px;
-}
-
-.verde{background:#22c55e;color:white}
-.amarillo{background:#facc15;color:black;font-weight:600}
 
 button{
 width:100%;
@@ -100,6 +67,9 @@ margin-top:5px;
 cursor:pointer;
 font-family:'Poppins',sans-serif;
 }
+
+.verde{background:#22c55e;color:white}
+.amarillo{background:#facc15;color:black;font-weight:600}
 
 ul{padding-left:18px;margin:0}
 
@@ -123,17 +93,6 @@ max-width:350px;
 padding:20px;
 border-radius:12px;
 text-align:center;
-}
-
-/* animación agregado */
-.agregado{
-animation:pop 0.3s ease;
-}
-
-@keyframes pop{
-0%{transform:scale(1)}
-50%{transform:scale(1.1)}
-100%{transform:scale(1)}
 }
 </style>
 
@@ -173,7 +132,7 @@ document.getElementById("m"+m).classList.add("activa");
 };
 
 //////////////////////////////////////////////////////
-// 🔥 PRODUCTOS + VISUAL PRO
+// PRODUCTOS
 //////////////////////////////////////////////////////
 
 window.addItem=(n,p)=>{
@@ -185,14 +144,7 @@ return;
 
 pedido.push({n,p});
 total+=p;
-
 render();
-
-/* animación visual */
-let lista=document.getElementById("lista");
-lista.classList.remove("agregado");
-void lista.offsetWidth;
-lista.classList.add("agregado");
 };
 
 window.marcar=(btn)=>{
@@ -223,7 +175,7 @@ document.getElementById("t").innerText=total;
 }
 
 //////////////////////////////////////////////////////
-// ENVIAR A COCINA
+// ENVIAR
 //////////////////////////////////////////////////////
 
 window.enviar=async()=>{
@@ -271,7 +223,47 @@ document.getElementById("modal").style.display="none";
 };
 
 //////////////////////////////////////////////////////
-// CAJA (DETALLADO PRO FINAL)
+// COCINA
+//////////////////////////////////////////////////////
+
+onSnapshot(collection(db,"pedidos"),snap=>{
+
+let cont=document.getElementById("avisos");
+cont.innerHTML="";
+
+snap.forEach(d=>{
+let p=d.data();
+
+if(p.estado==="entregado"){
+
+let div=document.createElement("div");
+
+div.innerHTML=`
+🍽️ Mesa ${p.mesa}
+<br><small>${p.fecha}</small>
+
+<ul>
+${p.items.map(i=>`<li>${i.n}</li>`).join("")}
+</ul>
+
+<button class="amarillo">✔ ENTREGAR</button>
+`;
+
+div.querySelector("button").onclick=async()=>{
+await updateDoc(doc(db,"pedidos",d.id),{
+estado:"listo"
+});
+};
+
+cont.appendChild(div);
+}
+
+});
+
+});
+
+//////////////////////////////////////////////////////
+// CAJA (CON PRECIO)
 //////////////////////////////////////////////////////
 
 onSnapshot(collection(db,"pedidos"),snap=>{
@@ -294,33 +286,12 @@ fecha:p.fecha
 };
 }
 
-// sumar total general
-mesas[p.mesa].total += p.total;
-
-// 🔥 detalle correcto de productos
-p.items.forEach(i=>{
-
-let existe = mesas[p.mesa].items.find(x=>x.n === i.n);
-
-if(existe){
-existe.cant = (existe.cant || 1) + 1;
-existe.subtotal = existe.cant * i.p;
-}else{
-mesas[p.mesa].items.push({
-n:i.n,
-p:i.p,
-cant:1,
-subtotal:i.p
-});
+mesas[p.mesa].total+=p.total;
+mesas[p.mesa].items.push(...p.items);
 }
 
 });
 
-}
-
-});
-
-// render
 Object.keys(mesas).forEach(m=>{
 
 let d=mesas[m];
@@ -331,14 +302,10 @@ div.className="card";
 div.innerHTML=`
 <h3>💰 Mesa ${m}</h3>
 
-<small>🕒 ${d.fecha}</small>
+<small>${d.fecha}</small>
 
 <ul>
-${d.items.map(i=>`
-<li>
-<b>${i.n}</b> x${i.cant} = $${i.subtotal}
-</li>
-`).join("")}
+${d.items.map(i=>`<li>${i.n} - $${i.p}</li>`).join("")}
 </ul>
 
 <h2>Total: $${d.total}</h2>
@@ -364,9 +331,6 @@ caja.appendChild(div);
 
 });
 
-
-});
-
 </script>
 
 </head>
@@ -386,8 +350,8 @@ caja.appendChild(div);
 
 <button class="azul" onclick="marcar(this);addItem('Pizza',18000)">Pizza $18000</button>
 <button class="azul" onclick="marcar(this);addItem('Hamburguesa',15000)">Hamburguesa $15000</button>
-<button class="azul" onclick="marcar(this);addItem('Milanesa',18000)">Milanesa c/papas $18000</button>
-<button class="azul" onclick="marcar(this);addItem('Pasta',16000)">Pasta $16000 </button>
+<button class="azul" onclick="marcar(this);addItem('Milanesa',18000)">Milanesa $18000</button>
+<button class="azul" onclick="marcar(this);addItem('Pasta',16000)">Pasta $16000</button>
 <button class="azul" onclick="marcar(this);addItem('Empanadas',1200)">Empanadas $1200</button>
 </div>
 
