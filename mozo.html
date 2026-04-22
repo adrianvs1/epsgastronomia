@@ -30,9 +30,17 @@ padding:15px;
 border-radius:10px;
 text-align:center;
 cursor:pointer;
+transition:0.2s;
 }
 
-.mesa.activa{background:#22c55e}
+.mesa:active{
+transform:scale(0.97);
+}
+
+.mesa.activa{
+background:#22c55e;
+box-shadow:0 0 10px rgba(34,197,94,0.4);
+}
 
 .card{
 background:#1e293b;
@@ -40,6 +48,48 @@ padding:10px;
 border-radius:10px;
 margin:10px 0;
 }
+
+/* BOTONES PRODUCTOS */
+.azul{
+background:#3b82f6;
+color:white;
+transition:0.2s;
+position:relative;
+overflow:hidden;
+}
+
+.azul:active{
+transform:scale(0.97);
+}
+
+/* 🔥 EFECTO SELECCIONADO */
+.azul.seleccionado{
+background:#22c55e !important;
+box-shadow:0 0 12px rgba(34,197,94,0.7);
+transform:scale(1.03);
+}
+
+/* efecto click ripple */
+.azul::after{
+content:"";
+position:absolute;
+width:0;
+height:0;
+background:rgba(255,255,255,0.3);
+border-radius:50%;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+transition:width 0.4s, height 0.4s;
+}
+
+.azul:active::after{
+width:200px;
+height:200px;
+}
+
+.verde{background:#22c55e;color:white}
+.amarillo{background:#facc15;color:black;font-weight:600}
 
 button{
 width:100%;
@@ -50,10 +100,6 @@ margin-top:5px;
 cursor:pointer;
 font-family:'Poppins',sans-serif;
 }
-
-.azul{background:#3b82f6;color:white}
-.verde{background:#22c55e;color:white}
-.amarillo{background:#facc15;color:black;font-weight:600}
 
 ul{padding-left:18px;margin:0}
 
@@ -77,6 +123,17 @@ max-width:350px;
 padding:20px;
 border-radius:12px;
 text-align:center;
+}
+
+/* animación agregado */
+.agregado{
+animation:pop 0.3s ease;
+}
+
+@keyframes pop{
+0%{transform:scale(1)}
+50%{transform:scale(1.1)}
+100%{transform:scale(1)}
 }
 </style>
 
@@ -116,7 +173,7 @@ document.getElementById("m"+m).classList.add("activa");
 };
 
 //////////////////////////////////////////////////////
-// PRODUCTOS
+// 🔥 PRODUCTOS + VISUAL PRO
 //////////////////////////////////////////////////////
 
 window.addItem=(n,p)=>{
@@ -128,7 +185,21 @@ return;
 
 pedido.push({n,p});
 total+=p;
+
 render();
+
+/* animación visual */
+let lista=document.getElementById("lista");
+lista.classList.remove("agregado");
+void lista.offsetWidth;
+lista.classList.add("agregado");
+};
+
+window.marcar=(btn)=>{
+document.querySelectorAll(".azul").forEach(b=>{
+if(b!==btn) b.classList.remove("seleccionado");
+});
+btn.classList.add("seleccionado");
 };
 
 window.del=(i)=>{
@@ -152,7 +223,7 @@ document.getElementById("t").innerText=total;
 }
 
 //////////////////////////////////////////////////////
-// ENVIAR A COCINA (CON FECHA Y HORA)
+// ENVIAR A COCINA
 //////////////////////////////////////////////////////
 
 window.enviar=async()=>{
@@ -162,8 +233,7 @@ alert("Seleccioná mesa y productos");
 return;
 }
 
-// 🕒 FECHA Y HORA
-const fechaHora = new Date().toLocaleString();
+const fechaHora=new Date().toLocaleString();
 
 await addDoc(collection(db,"pedidos"),{
 mesa,
@@ -173,18 +243,14 @@ estado:"cocina",
 fecha:fechaHora
 });
 
-// MODAL
-let modal=document.getElementById("modal");
-
-modal.innerHTML=`
+document.getElementById("modal").innerHTML=`
 <div id="modalBox">
 <h2>✔ Pedido enviado</h2>
-
-<p><b>Mesa:</b> ${mesa}</p>
-<p><b>Fecha:</b> ${fechaHora}</p>
+<p>Mesa ${mesa}</p>
+<p>${fechaHora}</p>
 
 <ul>
-${pedido.map(p=>`<li>${p.n} - $${p.p}</li>`).join("")}
+${pedido.map(p=>`<li>${p.n}</li>`).join("")}
 </ul>
 
 <h3>Total: $${total}</h3>
@@ -193,9 +259,8 @@ ${pedido.map(p=>`<li>${p.n} - $${p.p}</li>`).join("")}
 </div>
 `;
 
-modal.style.display="block";
+document.getElementById("modal").style.display="block";
 
-// reset
 pedido=[];
 total=0;
 render();
@@ -206,7 +271,7 @@ document.getElementById("modal").style.display="none";
 };
 
 //////////////////////////////////////////////////////
-// COCINA
+// COCINA (SIN CAMBIOS)
 //////////////////////////////////////////////////////
 
 onSnapshot(collection(db,"pedidos"),snap=>{
@@ -223,7 +288,7 @@ let div=document.createElement("div");
 
 div.innerHTML=`
 🍽️ Mesa ${p.mesa}
-<br><small>🕒 ${p.fecha}</small>
+<br><small>${p.fecha}</small>
 
 <ul>
 ${p.items.map(i=>`<li>${i.n}</li>`).join("")}
@@ -246,7 +311,7 @@ cont.appendChild(div);
 });
 
 //////////////////////////////////////////////////////
-// CAJA
+// CAJA (SIN CAMBIOS)
 //////////////////////////////////////////////////////
 
 onSnapshot(collection(db,"pedidos"),snap=>{
@@ -281,7 +346,7 @@ div.className="card";
 div.innerHTML=`
 <h3>💰 Mesa ${m}</h3>
 
-<small>🕒 ${d.fecha}</small>
+<small>${d.fecha}</small>
 
 <ul>
 ${d.items.map(i=>`<li>${i.n}</li>`).join("")}
@@ -316,7 +381,7 @@ caja.appendChild(div);
 
 <body>
 
-<h1>🍽️ EPS - SABORES EN CODIGO</h1>
+<h1>🍽️ EPS - SABORES EN CÓDIGO</h1>
 
 <div class="grid">
 <div class="mesa" id="m1" onclick="sel(1)">Mesa 1</div>
@@ -327,20 +392,20 @@ caja.appendChild(div);
 <div class="card">
 <h2>🍔 Comidas</h2>
 
-<button class="azul" onclick="addItem('Pizza',2000)">Pizza</button>
-<button class="azul" onclick="addItem('Hamburguesa',2500)">Hamburguesa</button>
-<button class="azul" onclick="addItem('Milanesa',2800)">Milanesa</button>
-<button class="azul" onclick="addItem('Pasta',2600)">Pasta</button>
-<button class="azul" onclick="addItem('Empanadas',1200)">Empanadas</button>
+<button class="azul" onclick="marcar(this);addItem('Pizza',18000)">Pizza $18000</button>
+<button class="azul" onclick="marcar(this);addItem('Hamburguesa',15000)">Hamburguesa $15000</button>
+<button class="azul" onclick="marcar(this);addItem('Milanesa',18000)">Milanesa c/papas $18000</button>
+<button class="azul" onclick="marcar(this);addItem('Pasta',16000)">Pasta $16000 </button>
+<button class="azul" onclick="marcar(this);addItem('Empanadas',1200)">Empanadas $1200</button>
 </div>
 
 <div class="card">
 <h2>🥤 Bebidas</h2>
 
-<button class="azul" onclick="addItem('Gaseosa',800)">Gaseosa</button>
-<button class="azul" onclick="addItem('Agua',600)">Agua</button>
-<button class="azul" onclick="addItem('Cerveza',1200)">Cerveza</button>
-<button class="azul" onclick="addItem('Vino',2500)">Vino</button>
+<button class="azul" onclick="marcar(this);addItem('Gaseosa',8000)">Gaseosa $8000</button>
+<button class="azul" onclick="marcar(this);addItem('Agua',6000)">Agua $6000</button>
+<button class="azul" onclick="marcar(this);addItem('Cerveza',12000)">Cerveza $12000</button>
+<button class="azul" onclick="marcar(this);addItem('Vino',8000)">Vino $8000</button>
 </div>
 
 <div class="card">
