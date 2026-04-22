@@ -3,27 +3,34 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cocina</title>
+<title>Cocina PRO FINAL</title>
 
 <style>
-body{font-family:system-ui;background:#020617;color:white;margin:0;padding:10px}
+body{
+ font-family:system-ui;
+ background:#020617;
+ color:white;
+ margin:0;
+ padding:10px;
+}
+
 h1{text-align:center}
 
 .card{
-background:#111827;
-padding:10px;
-margin-bottom:10px;
-border-radius:10px;
+ background:#111827;
+ padding:10px;
+ border-radius:10px;
+ margin-bottom:10px;
 }
 
 button{
-width:100%;
-padding:10px;
-margin-top:5px;
-border:none;
-border-radius:8px;
-background:#22c55e;
-color:white;
+ width:100%;
+ padding:10px;
+ margin-top:5px;
+ border:none;
+ border-radius:8px;
+ background:#22c55e;
+ color:white;
 }
 
 .rojo{background:#ef4444}
@@ -33,73 +40,76 @@ color:white;
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-getFirestore,
-collection,
-onSnapshot,
-doc,
-updateDoc,
-deleteDoc,
-getDocs
+ getFirestore,
+ collection,
+ onSnapshot,
+ doc,
+ updateDoc,
+ deleteDoc,
+ getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
-apiKey: "TU_API_KEY",
-authDomain: "TU_AUTH",
-projectId: "TU_PROJECT_ID",
-storageBucket: "TU_BUCKET",
-messagingSenderId: "TU_ID",
-appId: "TU_APP_ID"
+  apiKey: "AIzaSyAa_bH-T5Uv36eM-dSjasTFzVWp9Iwj0Ps",
+  authDomain: "epsgastronomia-6d1b2.firebaseapp.com",
+  projectId: "epsgastronomia-6d1b2",
+  storageBucket: "epsgastronomia-6d1b2.firebasestorage.app",
+  messagingSenderId: "735621231992",
+  appId: "1:735621231992:web:ac62161644b7377095448d"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// 👀 pedidos
 onSnapshot(collection(db,"pedidos"),(snap)=>{
 
-let cont=document.getElementById("pedidos");
-cont.innerHTML="";
+ let cont=document.getElementById("pedidos");
+ cont.innerHTML="";
 
-snap.forEach(d=>{
-const p=d.data();
+ snap.forEach(d=>{
+  const p=d.data();
 
-let div=document.createElement("div");
-div.className="card";
+  let div=document.createElement("div");
+  div.className="card";
 
-div.innerHTML=`
-<h3>Mesa ${p.mesa}</h3>
-<p>${p.items.map(i=>i.nombre).join(", ")}</p>
-<p>Total $${p.total}</p>
-`;
+  div.innerHTML=`
+   <h3>🍽️ Mesa ${p.mesa}</h3>
+   <p>${p.items.map(i=>i.nombre).join(", ")}</p>
+   <p>Total: $${p.total}</p>
+  `;
 
-if(!p.listo){
-let btn=document.createElement("button");
-btn.textContent="LISTO";
+  if(!p.listo){
+    let btn=document.createElement("button");
+    btn.textContent="✔ LISTO";
 
-btn.onclick=async()=>{
-await updateDoc(doc(db,"pedidos",d.id),{
-listo:true
+    btn.onclick=async()=>{
+      await updateDoc(doc(db,"pedidos",d.id),{
+        listo:true
+      });
+    };
+
+    div.appendChild(btn);
+  } else {
+    div.innerHTML+="<p>✔ LISTO</p>";
+  }
+
+  cont.appendChild(div);
+ });
+
 });
-};
 
-div.appendChild(btn);
-} else {
-div.innerHTML+="✔ LISTO";
-}
-
-cont.appendChild(div);
-});
-
-});
-
-// borrar todo
+// 🧹 borrar todo
 window.borrarTodo=async()=>{
-const snap=await getDocs(collection(db,"pedidos"));
+ if(!confirm("¿Borrar todo?")) return;
 
-snap.forEach(async(d)=>{
-await deleteDoc(doc(db,"pedidos",d.id));
-});
+ const snap=await getDocs(collection(db,"pedidos"));
 
-alert("Borrado");
+ snap.forEach(async(d)=>{
+  await deleteDoc(doc(db,"pedidos",d.id));
+ });
+
+ alert("Borrado completo");
 };
 
 </script>
@@ -108,9 +118,9 @@ alert("Borrado");
 
 <body>
 
-<h1>Cocina</h1>
+<h1>👨‍🍳 Cocina PRO FINAL</h1>
 
-<button class="rojo" onclick="borrarTodo()">Borrar todo</button>
+<button class="rojo" onclick="borrarTodo()">🧹 Borrar todo</button>
 
 <div id="pedidos"></div>
 
