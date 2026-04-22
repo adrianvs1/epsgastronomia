@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mozo PRO FINAL</title>
+<title>Cocina PRO FINAL</title>
 
 <style>
 body{
  font-family:system-ui;
- background:#0f172a;
+ background:#020617;
  color:white;
  margin:0;
  padding:10px;
@@ -16,25 +16,8 @@ body{
 
 h1{text-align:center}
 
-.grid{
- display:grid;
- grid-template-columns:repeat(3,1fr);
- gap:10px;
- margin-bottom:10px;
-}
-
-.mesa{
- padding:18px;
- background:#1e293b;
- text-align:center;
- border-radius:10px;
- cursor:pointer;
-}
-
-.mesa.activa{background:#22c55e}
-
 .card{
- background:#1e293b;
+ background:#111827;
  padding:10px;
  border-radius:10px;
  margin-bottom:10px;
@@ -46,20 +29,11 @@ button{
  margin-top:5px;
  border:none;
  border-radius:8px;
- cursor:pointer;
-}
-
-.azul{background:#3b82f6;color:white}
-.verde{background:#22c55e;color:white}
-.naranja{background:#f59e0b;color:white}
-
-#avisos div{
  background:#22c55e;
- padding:10px;
- margin:5px 0;
- border-radius:8px;
- font-weight:bold;
+ color:white;
 }
+
+.rojo{background:#ef4444}
 </style>
 
 <script type="module">
@@ -68,13 +42,11 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import {
  getFirestore,
  collection,
- addDoc,
  onSnapshot,
  doc,
- getDoc,
- setDoc,
  updateDoc,
- deleteDoc
+ deleteDoc,
+ getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -89,109 +61,56 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-let mesaActual=null;
-let pedido=[];
-let total=0;
-
-// 🪑 mesas
-window.selectMesa=(n)=>{
- mesaActual=n;
- document.querySelectorAll(".mesa").forEach(m=>m.classList.remove("activa"));
- document.getElementById("m"+n).classList.add("activa");
-};
-
-// 🍔 agregar
-window.addItem=(n,p)=>{
- if(!mesaActual) return alert("Seleccioná mesa");
-
- pedido.push({nombre:n,precio:p});
- total+=p;
- render();
-};
-
-// ❌ borrar item
-window.borrarItem=(i)=>{
- total-=pedido[i].precio;
- pedido.splice(i,1);
- render();
-};
-
-function render(){
- let lista=document.getElementById("lista");
- lista.innerHTML="";
-
- pedido.forEach((p,i)=>{
-  let li=document.createElement("li");
-  li.innerHTML=`
-   <span>${p.nombre} - $${p.precio}</span>
-   <button onclick="borrarItem(${i})" style="background:red;color:white;width:auto">X</button>
-  `;
-  lista.appendChild(li);
- });
-
- document.getElementById("total").textContent=total;
-}
-
-// 📤 enviar a cocina + vibración
-window.enviar=async()=>{
-
- if(!mesaActual || pedido.length===0) return;
-
- navigator.vibrate(200); // 🔔 vibración
-
- await addDoc(collection(db,"pedidos"),{
-  mesa:mesaActual,
-  items:pedido,
-  total,
-  listo:false
- });
-
- pedido=[]; total=0;
- render();
-};
-
-// 💰 cobrar
-window.cobrarMesa=async()=>{
- if(!mesaActual) return;
- await setDoc(doc(db,"mesas",mesaActual+""),{total:0});
- alert("Mesa cobrada");
-};
-
-// 🔔 avisos + vibración cuando listo
-let estadoAnterior=new Map();
-
+// 👀 pedidos
 onSnapshot(collection(db,"pedidos"),(snap)=>{
 
+ let cont=document.getElementById("pedidos");
+ cont.innerHTML="";
+
  snap.forEach(d=>{
-  const data=d.data();
-  const id=d.id;
-  const prev=estadoAnterior.get(id);
+  const p=d.data();
 
-  if(prev && prev.listo===false && data.listo===true){
+  let div=document.createElement("div");
+  div.className="card";
 
-    navigator.vibrate([200,100,200]); // 🔔 vibración fuerte
+  div.innerHTML=`
+   <h3>🍽️ Mesa ${p.mesa}</h3>
+   <p>${p.items.map(i=>i.nombre).join(", ")}</p>
+   <p>Total: $${p.total}</p>
+  `;
 
-    let aviso=document.createElement("div");
+  if(!p.listo){
+    let btn=document.createElement("button");
+    btn.textContent="✔ LISTO";
 
-    aviso.innerHTML=`
-      🍽️ Mesa ${data.mesa} listo para retirar
-      <button style="background:red;color:white;margin-top:5px">
-        Pedido entregado
-      </button>
-    `;
-
-    aviso.querySelector("button").onclick=async()=>{
-      await deleteDoc(doc(db,"pedidos",id));
-      aviso.remove();
+    btn.onclick=async()=>{
+      await updateDoc(doc(db,"pedidos",d.id),{
+        listo:true
+      });
     };
 
-    document.getElementById("avisos").appendChild(aviso);
+    div.appendChild(btn);
+  } else {
+    div.innerHTML+="<p>✔ LISTO</p>";
   }
 
-  estadoAnterior.set(id,data);
+  cont.appendChild(div);
  });
 
 });
+
+// 🧹 borrar todo
+window.borrarTodo=async()=>{
+ if(!confirm("¿Borrar todo?")) return;
+
+ const snap=await getDocs(collection(db,"pedidos"));
+
+ snap.forEach(async(d)=>{
+  await deleteDoc(doc(db,"pedidos",d.id));
+ });
+
+ alert("Borrado completo");
+};
 
 </script>
 
@@ -199,39 +118,11 @@ onSnapshot(collection(db,"pedidos"),(snap)=>{
 
 <body>
 
-<h1>🍽️ Mozo PRO FINAL</h1>
+<h1>👨‍🍳 Cocina PRO FINAL</h1>
 
-<div class="card">
-<h2>🔔 Avisos</h2>
-<div id="avisos"></div>
-</div>
+<button class="rojo" onclick="borrarTodo()">🧹 Borrar todo</button>
 
-<div class="grid">
-<div class="mesa" id="m1" onclick="selectMesa(1)">Mesa 1</div>
-<div class="mesa" id="m2" onclick="selectMesa(2)">Mesa 2</div>
-<div class="mesa" id="m3" onclick="selectMesa(3)">Mesa 3</div>
-<div class="mesa" id="m4" onclick="selectMesa(4)">Mesa 4</div>
-<div class="mesa" id="m5" onclick="selectMesa(5)">Mesa 5</div>
-</div>
-
-<div class="card">
-<h2>Menú</h2>
-
-<button class="azul" onclick="addItem('Hamburguesa',2000)">🍔 Hamburguesa</button>
-<button class="azul" onclick="addItem('Pizza',2200)">🍕 Pizza</button>
-<button class="azul" onclick="addItem('Milanesa',2500)">🍗 Milanesa</button>
-<button class="azul" onclick="addItem('Gaseosa',800)">🥤 Gaseosa</button>
-</div>
-
-<div class="card">
-<h2>Pedido</h2>
-
-<ul id="lista"></ul>
-<p>Total: $<span id="total">0</span></p>
-
-<button class="verde" onclick="enviar()">Enviar a Cocina</button>
-<button class="naranja" onclick="cobrarMesa()">💰 Cobrar Mesa</button>
-</div>
+<div id="pedidos"></div>
 
 </body>
 </html>
