@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mozo PRO</title>
+<title>Mozo PRO FINAL</title>
 
 <style>
 body{
@@ -24,11 +24,10 @@ h1{text-align:center}
 }
 
 .mesa{
- padding:20px;
- text-align:center;
- border-radius:12px;
+ padding:18px;
  background:#1e293b;
- font-size:18px;
+ text-align:center;
+ border-radius:10px;
  cursor:pointer;
 }
 
@@ -37,41 +36,54 @@ h1{text-align:center}
 .card{
  background:#1e293b;
  padding:10px;
- border-radius:12px;
+ border-radius:10px;
  margin-bottom:10px;
 }
 
 button{
  width:100%;
- padding:12px;
- margin:5px 0;
+ padding:10px;
+ margin-top:5px;
  border:none;
- border-radius:10px;
- background:#3b82f6;
- color:white;
- font-size:15px;
+ border-radius:8px;
+ cursor:pointer;
 }
 
-.reset{background:#ef4444}
-.enviar{background:#22c55e}
+.azul{background:#3b82f6;color:white}
+.verde{background:#22c55e;color:white}
+.naranja{background:#f59e0b;color:white}
 
-ul{list-style:none;padding:0}
-li{padding:5px 0;border-bottom:1px solid #444}
-
-.total{
- font-size:22px;
- text-align:center;
+#avisos div{
+ background:#22c55e;
+ padding:10px;
+ margin:5px 0;
+ border-radius:8px;
+ font-weight:bold;
 }
 </style>
 
 <script type="module">
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, doc, getDoc, setDoc, updateDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import {
+ getFirestore,
+ collection,
+ addDoc,
+ onSnapshot,
+ doc,
+ getDoc,
+ setDoc,
+ updateDoc,
+ deleteDoc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAa_bH-T5Uv36eM-dSjasTFzVWp9Iwj0Ps",
   authDomain: "epsgastronomia-6d1b2.firebaseapp.com",
-  projectId: "epsgastronomia-6d1b2"
+  projectId: "epsgastronomia-6d1b2",
+  storageBucket: "epsgastronomia-6d1b2.firebasestorage.app",
+  messagingSenderId: "735621231992",
+  appId: "1:735621231992:web:ac62161644b7377095448d"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -81,37 +93,51 @@ let mesaActual=null;
 let pedido=[];
 let total=0;
 
-// seleccionar mesa
+// 🪑 mesas
 window.selectMesa=(n)=>{
  mesaActual=n;
  document.querySelectorAll(".mesa").forEach(m=>m.classList.remove("activa"));
  document.getElementById("m"+n).classList.add("activa");
-}
+};
 
-// agregar producto
+// 🍔 agregar
 window.addItem=(n,p)=>{
  if(!mesaActual) return alert("Seleccioná mesa");
 
  pedido.push({nombre:n,precio:p});
  total+=p;
  render();
-}
+};
 
-// render pedido
+// ❌ borrar item
+window.borrarItem=(i)=>{
+ total-=pedido[i].precio;
+ pedido.splice(i,1);
+ render();
+};
+
 function render(){
  let lista=document.getElementById("lista");
  lista.innerHTML="";
- pedido.forEach(i=>{
+
+ pedido.forEach((p,i)=>{
   let li=document.createElement("li");
-  li.textContent=i.nombre+" - $"+i.precio;
+  li.innerHTML=`
+   <span>${p.nombre} - $${p.precio}</span>
+   <button onclick="borrarItem(${i})" style="background:red;color:white;width:auto">X</button>
+  `;
   lista.appendChild(li);
  });
+
  document.getElementById("total").textContent=total;
 }
 
-// enviar pedido
+// 📤 enviar a cocina + vibración
 window.enviar=async()=>{
- if(!mesaActual || pedido.length==0) return;
+
+ if(!mesaActual || pedido.length===0) return;
+
+ navigator.vibrate(200); // 🔔 vibración
 
  await addDoc(collection(db,"pedidos"),{
   mesa:mesaActual,
@@ -120,62 +146,66 @@ window.enviar=async()=>{
   listo:false
  });
 
- let ref=doc(db,"mesas",""+mesaActual);
- let snap=await getDoc(ref);
-
- if(snap.exists()){
-  await updateDoc(ref,{total:snap.data().total+total});
- }else{
-  await setDoc(ref,{total});
- }
-
- pedido=[];total=0;
+ pedido=[]; total=0;
  render();
-}
+};
 
-// cobrar/reset mesa
-window.resetMesa=async()=>{
+// 💰 cobrar
+window.cobrarMesa=async()=>{
  if(!mesaActual) return;
-
- let ref=doc(db,"mesas",""+mesaActual);
- await setDoc(ref,{total:0});
-
+ await setDoc(doc(db,"mesas",mesaActual+""),{total:0});
  alert("Mesa cobrada");
-}
+};
 
-// borrar mesas cobradas (total 0)
-window.borrarMesas=async()=>{
- if(!confirm("¿Borrar mesas cobradas?")) return;
+// 🔔 avisos + vibración cuando listo
+let estadoAnterior=new Map();
 
- const snap=await getDocs(collection(db,"mesas"));
+onSnapshot(collection(db,"pedidos"),(snap)=>{
 
- snap.forEach(async(d)=>{
-  if(d.data().total===0){
-   await deleteDoc(doc(db,"mesas",d.id));
-  }
- });
-
- alert("Mesas limpiadas");
-}
-
-// ver totales en tiempo real
-onSnapshot(collection(db,"mesas"),(snap)=>{
- let lista=document.getElementById("totales");
- lista.innerHTML="";
  snap.forEach(d=>{
-  let li=document.createElement("li");
-  li.textContent="Mesa "+d.id+" → $"+d.data().total;
-  lista.appendChild(li);
+  const data=d.data();
+  const id=d.id;
+  const prev=estadoAnterior.get(id);
+
+  if(prev && prev.listo===false && data.listo===true){
+
+    navigator.vibrate([200,100,200]); // 🔔 vibración fuerte
+
+    let aviso=document.createElement("div");
+
+    aviso.innerHTML=`
+      🍽️ Mesa ${data.mesa} listo para retirar
+      <button style="background:red;color:white;margin-top:5px">
+        Pedido entregado
+      </button>
+    `;
+
+    aviso.querySelector("button").onclick=async()=>{
+      await deleteDoc(doc(db,"pedidos",id));
+      aviso.remove();
+    };
+
+    document.getElementById("avisos").appendChild(aviso);
+  }
+
+  estadoAnterior.set(id,data);
  });
+
 });
+
 </script>
+
 </head>
 
 <body>
 
-<h1>🍽️ Mozo</h1>
+<h1>🍽️ Mozo PRO FINAL</h1>
 
-<!-- MESAS -->
+<div class="card">
+<h2>🔔 Avisos</h2>
+<div id="avisos"></div>
+</div>
+
 <div class="grid">
 <div class="mesa" id="m1" onclick="selectMesa(1)">Mesa 1</div>
 <div class="mesa" id="m2" onclick="selectMesa(2)">Mesa 2</div>
@@ -184,42 +214,23 @@ onSnapshot(collection(db,"mesas"),(snap)=>{
 <div class="mesa" id="m5" onclick="selectMesa(5)">Mesa 5</div>
 </div>
 
-<!-- MENÚ -->
 <div class="card">
-<h2>Entradas</h2>
-<button onclick="addItem('Ensalada',1200)">🥗 Ensalada</button>
-<button onclick="addItem('Sopa',1000)">🍲 Sopa</button>
+<h2>Menú</h2>
 
-<h2>Principales</h2>
-<button onclick="addItem('Milanesa',2500)">🍗 Milanesa</button>
-<button onclick="addItem('Hamburguesa',2000)">🍔 Hamburguesa</button>
-<button onclick="addItem('Pizza',2200)">🍕 Pizza</button>
-
-<h2>Postres</h2>
-<button onclick="addItem('Helado',1200)">🍨 Helado</button>
-<button onclick="addItem('Flan',1100)">🍮 Flan</button>
-
-<h2>Bebidas</h2>
-<button onclick="addItem('Gaseosa',800)">🥤 Gaseosa</button>
-<button onclick="addItem('Agua',600)">💧 Agua</button>
-<button onclick="addItem('Cerveza',1200)">🍺 Cerveza</button>
+<button class="azul" onclick="addItem('Hamburguesa',2000)">🍔 Hamburguesa</button>
+<button class="azul" onclick="addItem('Pizza',2200)">🍕 Pizza</button>
+<button class="azul" onclick="addItem('Milanesa',2500)">🍗 Milanesa</button>
+<button class="azul" onclick="addItem('Gaseosa',800)">🥤 Gaseosa</button>
 </div>
 
-<!-- PEDIDO -->
 <div class="card">
 <h2>Pedido</h2>
+
 <ul id="lista"></ul>
-<p class="total">$<span id="total">0</span></p>
+<p>Total: $<span id="total">0</span></p>
 
-<button class="enviar" onclick="enviar()">Enviar a Cocina</button>
-<button class="reset" onclick="resetMesa()">Cobrar / Reset Mesa</button>
-<button class="reset" onclick="borrarMesas()">🧹 Borrar Mesas Cobradas</button>
-</div>
-
-<!-- TOTALES -->
-<div class="card">
-<h2>Totales</h2>
-<ul id="totales"></ul>
+<button class="verde" onclick="enviar()">Enviar a Cocina</button>
+<button class="naranja" onclick="cobrarMesa()">💰 Cobrar Mesa</button>
 </div>
 
 </body>
