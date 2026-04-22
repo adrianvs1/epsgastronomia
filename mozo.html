@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mozo PRO FINAL</title>
+<title>Mozo POS Firebase</title>
 
 <style>
 body{
@@ -62,6 +62,7 @@ font-weight:bold;
 }
 </style>
 
+<!-- FIREBASE -->
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -71,10 +72,8 @@ collection,
 addDoc,
 onSnapshot,
 doc,
-getDoc,
-setDoc,
-updateDoc,
-deleteDoc
+getDocs,
+updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -100,12 +99,9 @@ document.querySelectorAll(".mesa").forEach(m => m.classList.remove("activa"));
 document.getElementById("m"+n).classList.add("activa");
 };
 
-// 🍔 agregar producto
+// 🍔 agregar item
 window.addItem = (n,p) => {
-if(!mesaActual){
-alert("Seleccioná una mesa");
-return;
-}
+if(!mesaActual) return alert("Seleccioná mesa");
 
 pedido.push({nombre:n,precio:p});
 total += p;
@@ -121,11 +117,11 @@ render();
 
 function render(){
 let lista = document.getElementById("lista");
-lista.innerHTML="";
+lista.innerHTML = "";
 
 pedido.forEach((p,i)=>{
-let li=document.createElement("li");
-li.innerHTML=`
+let li = document.createElement("li");
+li.innerHTML = `
 ${p.nombre} - $${p.precio}
 <button onclick="borrarItem(${i})" style="background:red;color:white;width:auto">X</button>
 `;
@@ -135,21 +131,20 @@ lista.appendChild(li);
 document.getElementById("total").textContent = total;
 }
 
-// 📤 ENVIAR A COCINA (FIX MOBILE)
+// 📤 ENVIAR A COCINA
 window.enviar = async () => {
-try {
+try{
 
 if(!mesaActual || pedido.length === 0){
-alert("Falta mesa o pedido");
+alert("Completa pedido");
 return;
 }
-
-console.log("Enviando pedido...");
 
 await addDoc(collection(db,"pedidos"),{
 mesa: mesaActual,
 items: pedido,
 total: total,
+estado: "pendiente",
 listo: false
 });
 
@@ -161,27 +156,53 @@ render();
 
 alert("Pedido enviado ✔");
 
-} catch (error) {
-console.error("ERROR:", error);
-alert("Error Firebase: " + error.message);
+}catch(e){
+alert("Error Firebase: " + e.message);
 }
 };
 
-// 💰 cobrar mesa
-window.cobrarMesa = async () => {
-try {
-if(!mesaActual) return;
+// 💰 CAJA MESA
+window.verCuenta = async () => {
 
-await setDoc(doc(db,"mesas",mesaActual+""),{total:0});
+let snap = await getDocs(collection(db,"pedidos"));
+let totalMesa = 0;
+
+snap.forEach(d=>{
+let p = d.data();
+
+if(p.mesa == mesaActual && p.estado == "entregado"){
+totalMesa += p.total;
+}
+});
+
+document.getElementById("caja").innerHTML = `
+<p>Mesa ${mesaActual}</p>
+<p style="font-size:22px"><b>$${totalMesa}</b></p>
+<button id="btnCobrar" style="background:#f59e0b;color:white">
+💰 COBRAR MESA
+</button>
+`;
+
+document.getElementById("btnCobrar").onclick = async () => {
+
+let snap = await getDocs(collection(db,"pedidos"));
+
+snap.forEach(async(d)=>{
+let p = d.data();
+
+if(p.mesa == mesaActual){
+await updateDoc(doc(db,"pedidos",d.id),{
+estado:"cerrado"
+});
+}
+});
 
 alert("Mesa cobrada ✔");
-
-} catch (e) {
-alert("Error al cobrar: " + e.message);
-}
+document.getElementById("caja").innerHTML = "";
+};
 };
 
-// 🔔 avisos cocina
+// 🔔 AVISOS DE COCINA
 let estado = new Map();
 
 onSnapshot(collection(db,"pedidos"),(snap)=>{
@@ -191,19 +212,27 @@ const data = d.data();
 const id = d.id;
 const prev = estado.get(id);
 
+// cuando cocina marca listo
 if(prev && prev.listo === false && data.listo === true){
 
 navigator.vibrate?.([200,100,200]);
 
 let aviso = document.createElement("div");
 aviso.innerHTML = `
-🍽️ Mesa ${data.mesa} lista
-<button style="background:red;color:white;width:100%">Entregado</button>
+🍽️ Mesa ${data.mesa} LISTA
+<button style="background:red;color:white;width:100%">
+ENTREGADO
+</button>
 `;
 
 aviso.querySelector("button").onclick = async () => {
-await deleteDoc(doc(db,"pedidos",id));
+
+await updateDoc(doc(db,"pedidos",id),{
+estado:"entregado"
+});
+
 aviso.remove();
+verCuenta();
 };
 
 document.getElementById("avisos").appendChild(aviso);
@@ -220,7 +249,12 @@ estado.set(id,data);
 
 <body>
 
-<h1>🍽️ Mozo PRO</h1>
+<h1>🍽️ Mozo POS Firebase</h1>
+
+<div class="card">
+<h2>💰 Caja</h2>
+<div id="caja"></div>
+</div>
 
 <div id="avisos"></div>
 
@@ -243,7 +277,7 @@ estado.set(id,data);
 <p>Total: $<span id="total">0</span></p>
 
 <button class="verde" onclick="enviar()">Enviar a Cocina</button>
-<button class="naranja" onclick="cobrarMesa()">Cobrar</button>
+<button class="naranja" onclick="verCuenta()">Ver cuenta</button>
 </div>
 
 </body>
