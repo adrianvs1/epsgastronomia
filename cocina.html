@@ -3,117 +3,235 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cocina PRO</title>
+<title>Mozo PRO FINAL</title>
 
 <style>
 body{
  font-family:system-ui;
- background:#020617;
+ background:#0f172a;
  color:white;
  margin:0;
  padding:10px;
 }
 
-h1{
- text-align:center;
- margin-bottom:10px;
-}
+h1{text-align:center}
 
 .grid{
  display:grid;
- grid-template-columns:1fr;
+ grid-template-columns:repeat(3,1fr);
  gap:10px;
+ margin-bottom:10px;
 }
+
+.mesa{
+ padding:18px;
+ background:#1e293b;
+ text-align:center;
+ border-radius:10px;
+ cursor:pointer;
+}
+
+.mesa.activa{background:#22c55e}
 
 .card{
- background:#111827;
- padding:12px;
- border-radius:14px;
- box-shadow:0 4px 10px rgba(0,0,0,0.3);
-}
-
-.card.lista{
- border-left:5px solid #22c55e;
-}
-
-.card.pendiente{
- border-left:5px solid #f59e0b;
+ background:#1e293b;
+ padding:10px;
+ border-radius:10px;
+ margin-bottom:10px;
 }
 
 button{
- margin-top:10px;
+ width:100%;
  padding:10px;
+ margin-top:5px;
  border:none;
  border-radius:8px;
- background:#22c55e;
- color:white;
- font-size:14px;
+ cursor:pointer;
 }
 
-.total{
+.azul{background:#3b82f6;color:white}
+.verde{background:#22c55e;color:white}
+.naranja{background:#f59e0b;color:white}
+
+#avisos div{
+ background:#22c55e;
+ padding:10px;
+ margin:5px 0;
+ border-radius:8px;
  font-weight:bold;
- margin-top:5px;
 }
 </style>
 
 <script type="module">
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, onSnapshot, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import {
+ getFirestore,
+ collection,
+ addDoc,
+ onSnapshot,
+ doc,
+ getDoc,
+ setDoc,
+ updateDoc,
+ deleteDoc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAa_bH-T5Uv36eM-dSjasTFzVWp9Iwj0Ps",
   authDomain: "epsgastronomia-6d1b2.firebaseapp.com",
-  projectId: "epsgastronomia-6d1b2"
+  projectId: "epsgastronomia-6d1b2",
+  storageBucket: "epsgastronomia-6d1b2.firebasestorage.app",
+  messagingSenderId: "735621231992",
+  appId: "1:735621231992:web:ac62161644b7377095448d"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// escuchar pedidos en tiempo real
+let mesaActual=null;
+let pedido=[];
+let total=0;
+
+// 🪑 mesas
+window.selectMesa=(n)=>{
+ mesaActual=n;
+ document.querySelectorAll(".mesa").forEach(m=>m.classList.remove("activa"));
+ document.getElementById("m"+n).classList.add("activa");
+};
+
+// 🍔 agregar
+window.addItem=(n,p)=>{
+ if(!mesaActual) return alert("Seleccioná mesa");
+
+ pedido.push({nombre:n,precio:p});
+ total+=p;
+ render();
+};
+
+// ❌ borrar item
+window.borrarItem=(i)=>{
+ total-=pedido[i].precio;
+ pedido.splice(i,1);
+ render();
+};
+
+function render(){
+ let lista=document.getElementById("lista");
+ lista.innerHTML="";
+
+ pedido.forEach((p,i)=>{
+  let li=document.createElement("li");
+  li.innerHTML=`
+   <span>${p.nombre} - $${p.precio}</span>
+   <button onclick="borrarItem(${i})" style="background:red;color:white;width:auto">X</button>
+  `;
+  lista.appendChild(li);
+ });
+
+ document.getElementById("total").textContent=total;
+}
+
+// 📤 enviar a cocina + vibración
+window.enviar=async()=>{
+
+ if(!mesaActual || pedido.length===0) return;
+
+ navigator.vibrate(200); // 🔔 vibración
+
+ await addDoc(collection(db,"pedidos"),{
+  mesa:mesaActual,
+  items:pedido,
+  total,
+  listo:false
+ });
+
+ pedido=[]; total=0;
+ render();
+};
+
+// 💰 cobrar
+window.cobrarMesa=async()=>{
+ if(!mesaActual) return;
+ await setDoc(doc(db,"mesas",mesaActual+""),{total:0});
+ alert("Mesa cobrada");
+};
+
+// 🔔 avisos + vibración cuando listo
+let estadoAnterior=new Map();
+
 onSnapshot(collection(db,"pedidos"),(snap)=>{
- let cont=document.getElementById("pedidos");
- cont.innerHTML="";
 
  snap.forEach(d=>{
-  let p=d.data();
+  const data=d.data();
+  const id=d.id;
+  const prev=estadoAnterior.get(id);
 
-  let div=document.createElement("div");
-  div.className="card " + (p.listo ? "lista" : "pendiente");
+  if(prev && prev.listo===false && data.listo===true){
 
-  div.innerHTML=`
-   <h2>🍽️ Mesa ${p.mesa}</h2>
-   <p>${p.items.map(i=>i.nombre).join(", ")}</p>
-   <p class="total">Total: $${p.total}</p>
-  `;
+    navigator.vibrate([200,100,200]); // 🔔 vibración fuerte
 
-  if(!p.listo){
-   let btn=document.createElement("button");
-   btn.textContent="✔ Marcar como Listo";
+    let aviso=document.createElement("div");
 
-   btn.onclick=async()=>{
-    await updateDoc(doc(db,"pedidos",d.id),{
-     listo:true
-    });
-   };
+    aviso.innerHTML=`
+      🍽️ Mesa ${data.mesa} listo para retirar
+      <button style="background:red;color:white;margin-top:5px">
+        Pedido entregado
+      </button>
+    `;
 
-   div.appendChild(btn);
-  }else{
-   let listo=document.createElement("p");
-   listo.textContent="✅ LISTO";
-   div.appendChild(listo);
+    aviso.querySelector("button").onclick=async()=>{
+      await deleteDoc(doc(db,"pedidos",id));
+      aviso.remove();
+    };
+
+    document.getElementById("avisos").appendChild(aviso);
   }
 
-  cont.appendChild(div);
+  estadoAnterior.set(id,data);
  });
+
 });
+
 </script>
+
 </head>
 
 <body>
 
-<h1>👨‍🍳 Cocina</h1>
+<h1>🍽️ Mozo PRO FINAL</h1>
 
-<div class="grid" id="pedidos"></div>
+<div class="card">
+<h2>🔔 Avisos</h2>
+<div id="avisos"></div>
+</div>
+
+<div class="grid">
+<div class="mesa" id="m1" onclick="selectMesa(1)">Mesa 1</div>
+<div class="mesa" id="m2" onclick="selectMesa(2)">Mesa 2</div>
+<div class="mesa" id="m3" onclick="selectMesa(3)">Mesa 3</div>
+<div class="mesa" id="m4" onclick="selectMesa(4)">Mesa 4</div>
+<div class="mesa" id="m5" onclick="selectMesa(5)">Mesa 5</div>
+</div>
+
+<div class="card">
+<h2>Menú</h2>
+
+<button class="azul" onclick="addItem('Hamburguesa',2000)">🍔 Hamburguesa</button>
+<button class="azul" onclick="addItem('Pizza',2200)">🍕 Pizza</button>
+<button class="azul" onclick="addItem('Milanesa',2500)">🍗 Milanesa</button>
+<button class="azul" onclick="addItem('Gaseosa',800)">🥤 Gaseosa</button>
+</div>
+
+<div class="card">
+<h2>Pedido</h2>
+
+<ul id="lista"></ul>
+<p>Total: $<span id="total">0</span></p>
+
+<button class="verde" onclick="enviar()">Enviar a Cocina</button>
+<button class="naranja" onclick="cobrarMesa()">💰 Cobrar Mesa</button>
+</div>
 
 </body>
 </html>
