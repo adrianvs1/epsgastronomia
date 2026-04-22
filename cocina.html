@@ -2,14 +2,83 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cocina PRO FINAL</title>
 
 <style>
-body{font-family:system-ui;background:#020617;color:white;padding:10px}
-.card{background:#111827;padding:10px;margin:10px 0;border-radius:10px}
-button{width:100%;padding:10px;border:none;border-radius:8px;margin-top:5px;cursor:pointer}
-.verde{background:#22c55e;color:white}
-.rojo{background:#ef4444;color:white}
+body{
+font-family:system-ui;
+background:#020617;
+color:white;
+padding:10px;
+margin:0;
+}
+
+/* TITULO GRANDE */
+h1{
+text-align:center;
+font-size:28px;
+margin-bottom:10px;
+}
+
+/* TARJETAS MÁS GRANDES */
+.card{
+background:#111827;
+padding:18px;
+margin:12px 0;
+border-radius:12px;
+box-shadow:0 5px 15px rgba(0,0,0,0.4);
+}
+
+/* MESA DESTACADA */
+h3{
+font-size:26px;
+margin:0 0 10px 0;
+color:#facc15;
+}
+
+/* LISTA PRODUCTOS GRANDE */
+ul{
+padding-left:20px;
+font-size:18px;
+}
+
+li{
+margin-bottom:5px;
+}
+
+/* HORA */
+p{
+font-size:14px;
+opacity:0.8;
+}
+
+/* BOTONES GRANDES */
+button{
+width:100%;
+padding:16px;
+border:none;
+border-radius:10px;
+margin-top:10px;
+cursor:pointer;
+font-size:18px;
+font-weight:bold;
+}
+
+.verde{
+background:#22c55e;
+color:white;
+}
+
+.rojo{
+background:#ef4444;
+color:white;
+}
+
+/* EFECTO TOQUE CELULAR */
+button:active{
+transform:scale(0.97);
+}
 </style>
 
 <script type="module">
@@ -34,7 +103,10 @@ projectId: "epsgastronomia-6d1b2"
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// 👨‍🍳 mostrar pedidos en cocina
+//////////////////////////////////////////////////////
+// 🔥 PEDIDOS EN VIVO
+//////////////////////////////////////////////////////
+
 onSnapshot(collection(db,"pedidos"),snap=>{
 
 let cont=document.getElementById("c");
@@ -48,9 +120,9 @@ if(p.estado==="cerrado") return;
 let div=document.createElement("div");
 div.className="card";
 
-// 🚫 SIN PRECIOS
+/* CONTENIDO */
 div.innerHTML=`
-<h3>🍽️ Mesa ${p.mesa}</h3>
+<h3>🍽️ MESA ${p.mesa}</h3>
 
 <ul>
 ${(p.items||[]).map(i=>`<li>${i.n}</li>`).join("")}
@@ -59,6 +131,7 @@ ${(p.items||[]).map(i=>`<li>${i.n}</li>`).join("")}
 <p>🕒 ${p.fecha || ""}</p>
 `;
 
+/* BOTÓN LISTO */
 if(p.estado==="cocina"){
 let btn=document.createElement("button");
 btn.className="verde";
@@ -73,8 +146,14 @@ estado:"entregado"
 div.appendChild(btn);
 }
 
+/* ESTADO FINAL */
 if(p.estado==="entregado"){
-div.innerHTML+="<p>✔ LISTO PARA MOZO</p>";
+let ok=document.createElement("div");
+ok.innerHTML="✔ LISTO PARA MOZO";
+ok.style.fontSize="18px";
+ok.style.marginTop="10px";
+ok.style.color="#22c55e";
+div.appendChild(ok);
 }
 
 cont.appendChild(div);
@@ -82,10 +161,13 @@ cont.appendChild(div);
 
 });
 
-// 🧹 RESET TOTAL (BORRAR TODO)
+//////////////////////////////////////////////////////
+// 🧹 RESET
+//////////////////////////////////////////////////////
+
 window.resetTodo=async()=>{
 
-if(!confirm("¿Seguro que querés borrar TODOS los pedidos?")) return;
+if(!confirm("¿Seguro que querés borrar TODO?")) return;
 
 const snap=await getDocs(collection(db,"pedidos"));
 
@@ -93,7 +175,7 @@ snap.forEach(async(d)=>{
 await deleteDoc(doc(db,"pedidos",d.id));
 });
 
-alert("Sistema reseteado ✔");
+alert("Sistema limpio ✔");
 };
 
 </script>
@@ -102,7 +184,7 @@ alert("Sistema reseteado ✔");
 
 <body>
 
-<h1>👨‍🍳 COCINA PRO FINAL</h1>
+<h1>👨‍🍳 COCINA PRO</h1>
 
 <button class="rojo" onclick="resetTodo()">🧹 RESET SISTEMA</button>
 
