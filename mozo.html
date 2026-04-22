@@ -7,46 +7,46 @@
 
 <style>
 body{
- font-family:system-ui;
- background:#0f172a;
- color:white;
- margin:0;
- padding:10px;
+font-family:system-ui;
+background:#0f172a;
+color:white;
+margin:0;
+padding:10px;
 }
 
 h1{text-align:center}
 
 .grid{
- display:grid;
- grid-template-columns:repeat(3,1fr);
- gap:10px;
- margin-bottom:10px;
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:10px;
+margin-bottom:10px;
 }
 
 .mesa{
- padding:18px;
- background:#1e293b;
- text-align:center;
- border-radius:10px;
- cursor:pointer;
+background:#1e293b;
+padding:15px;
+text-align:center;
+border-radius:10px;
+cursor:pointer;
 }
 
 .mesa.activa{background:#22c55e}
 
 .card{
- background:#1e293b;
- padding:10px;
- border-radius:10px;
- margin-bottom:10px;
+background:#1e293b;
+padding:10px;
+border-radius:10px;
+margin-bottom:10px;
 }
 
 button{
- width:100%;
- padding:10px;
- margin-top:5px;
- border:none;
- border-radius:8px;
- cursor:pointer;
+width:100%;
+padding:10px;
+margin-top:5px;
+border:none;
+border-radius:8px;
+cursor:pointer;
 }
 
 .azul{background:#3b82f6;color:white}
@@ -54,11 +54,11 @@ button{
 .naranja{background:#f59e0b;color:white}
 
 #avisos div{
- background:#22c55e;
- padding:10px;
- margin:5px 0;
- border-radius:8px;
- font-weight:bold;
+background:#22c55e;
+padding:10px;
+margin:5px 0;
+border-radius:8px;
+font-weight:bold;
 }
 </style>
 
@@ -66,130 +66,151 @@ button{
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
- getFirestore,
- collection,
- addDoc,
- onSnapshot,
- doc,
- getDoc,
- setDoc,
- updateDoc,
- deleteDoc
+getFirestore,
+collection,
+addDoc,
+onSnapshot,
+doc,
+getDoc,
+setDoc,
+updateDoc,
+deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAa_bH-T5Uv36eM-dSjasTFzVWp9Iwj0Ps",
-  authDomain: "epsgastronomia-6d1b2.firebaseapp.com",
-  projectId: "epsgastronomia-6d1b2",
-  storageBucket: "epsgastronomia-6d1b2.firebasestorage.app",
-  messagingSenderId: "735621231992",
-  appId: "1:735621231992:web:ac62161644b7377095448d"
+apiKey: "AIzaSyAa_bH-T5Uv36eM-dSjasTFzVWp9Iwj0Ps",
+authDomain: "epsgastronomia-6d1b2.firebaseapp.com",
+projectId: "epsgastronomia-6d1b2",
+storageBucket: "epsgastronomia-6d1b2.firebasestorage.app",
+messagingSenderId: "735621231992",
+appId: "1:735621231992:web:ac62161644b7377095448d"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-let mesaActual=null;
-let pedido=[];
-let total=0;
+let mesaActual = null;
+let pedido = [];
+let total = 0;
 
-// 🪑 mesas
-window.selectMesa=(n)=>{
- mesaActual=n;
- document.querySelectorAll(".mesa").forEach(m=>m.classList.remove("activa"));
- document.getElementById("m"+n).classList.add("activa");
+// 🪑 seleccionar mesa
+window.selectMesa = (n) => {
+mesaActual = n;
+document.querySelectorAll(".mesa").forEach(m => m.classList.remove("activa"));
+document.getElementById("m"+n).classList.add("activa");
 };
 
-// 🍔 agregar
-window.addItem=(n,p)=>{
- if(!mesaActual) return alert("Seleccioná mesa");
+// 🍔 agregar producto
+window.addItem = (n,p) => {
+if(!mesaActual){
+alert("Seleccioná una mesa");
+return;
+}
 
- pedido.push({nombre:n,precio:p});
- total+=p;
- render();
+pedido.push({nombre:n,precio:p});
+total += p;
+render();
 };
 
 // ❌ borrar item
-window.borrarItem=(i)=>{
- total-=pedido[i].precio;
- pedido.splice(i,1);
- render();
+window.borrarItem = (i) => {
+total -= pedido[i].precio;
+pedido.splice(i,1);
+render();
 };
 
 function render(){
- let lista=document.getElementById("lista");
- lista.innerHTML="";
+let lista = document.getElementById("lista");
+lista.innerHTML="";
 
- pedido.forEach((p,i)=>{
-  let li=document.createElement("li");
-  li.innerHTML=`
-   <span>${p.nombre} - $${p.precio}</span>
-   <button onclick="borrarItem(${i})" style="background:red;color:white;width:auto">X</button>
-  `;
-  lista.appendChild(li);
- });
+pedido.forEach((p,i)=>{
+let li=document.createElement("li");
+li.innerHTML=`
+${p.nombre} - $${p.precio}
+<button onclick="borrarItem(${i})" style="background:red;color:white;width:auto">X</button>
+`;
+lista.appendChild(li);
+});
 
- document.getElementById("total").textContent=total;
+document.getElementById("total").textContent = total;
 }
 
-// 📤 enviar a cocina + vibración
-window.enviar=async()=>{
+// 📤 ENVIAR A COCINA (FIX MOBILE)
+window.enviar = async () => {
+try {
 
- if(!mesaActual || pedido.length===0) return;
+if(!mesaActual || pedido.length === 0){
+alert("Falta mesa o pedido");
+return;
+}
 
- navigator.vibrate(200); // 🔔 vibración
+console.log("Enviando pedido...");
 
- await addDoc(collection(db,"pedidos"),{
-  mesa:mesaActual,
-  items:pedido,
-  total,
-  listo:false
- });
+await addDoc(collection(db,"pedidos"),{
+mesa: mesaActual,
+items: pedido,
+total: total,
+listo: false
+});
 
- pedido=[]; total=0;
- render();
+navigator.vibrate?.(200);
+
+pedido = [];
+total = 0;
+render();
+
+alert("Pedido enviado ✔");
+
+} catch (error) {
+console.error("ERROR:", error);
+alert("Error Firebase: " + error.message);
+}
 };
 
-// 💰 cobrar
-window.cobrarMesa=async()=>{
- if(!mesaActual) return;
- await setDoc(doc(db,"mesas",mesaActual+""),{total:0});
- alert("Mesa cobrada");
+// 💰 cobrar mesa
+window.cobrarMesa = async () => {
+try {
+if(!mesaActual) return;
+
+await setDoc(doc(db,"mesas",mesaActual+""),{total:0});
+
+alert("Mesa cobrada ✔");
+
+} catch (e) {
+alert("Error al cobrar: " + e.message);
+}
 };
 
-// 🔔 avisos + vibración cuando listo
-let estadoAnterior=new Map();
+// 🔔 avisos cocina
+let estado = new Map();
 
 onSnapshot(collection(db,"pedidos"),(snap)=>{
 
- snap.forEach(d=>{
-  const data=d.data();
-  const id=d.id;
-  const prev=estadoAnterior.get(id);
+snap.forEach(d=>{
+const data = d.data();
+const id = d.id;
+const prev = estado.get(id);
 
-  if(prev && prev.listo===false && data.listo===true){
+if(prev && prev.listo === false && data.listo === true){
 
-    navigator.vibrate([200,100,200]); // 🔔 vibración fuerte
+navigator.vibrate?.([200,100,200]);
 
-    let aviso=document.createElement("div");
+let aviso = document.createElement("div");
+aviso.innerHTML = `
+🍽️ Mesa ${data.mesa} lista
+<button style="background:red;color:white;width:100%">Entregado</button>
+`;
 
-    aviso.innerHTML=`
-      🍽️ Mesa ${data.mesa} listo para retirar
-      <button style="background:red;color:white;margin-top:5px">
-        Pedido entregado
-      </button>
-    `;
+aviso.querySelector("button").onclick = async () => {
+await deleteDoc(doc(db,"pedidos",id));
+aviso.remove();
+};
 
-    aviso.querySelector("button").onclick=async()=>{
-      await deleteDoc(doc(db,"pedidos",id));
-      aviso.remove();
-    };
+document.getElementById("avisos").appendChild(aviso);
+}
 
-    document.getElementById("avisos").appendChild(aviso);
-  }
-
-  estadoAnterior.set(id,data);
- });
+estado.set(id,data);
+});
 
 });
 
@@ -199,12 +220,9 @@ onSnapshot(collection(db,"pedidos"),(snap)=>{
 
 <body>
 
-<h1>🍽️ Mozo PRO FINAL</h1>
+<h1>🍽️ Mozo PRO</h1>
 
-<div class="card">
-<h2>🔔 Avisos</h2>
 <div id="avisos"></div>
-</div>
 
 <div class="grid">
 <div class="mesa" id="m1" onclick="selectMesa(1)">Mesa 1</div>
@@ -215,22 +233,17 @@ onSnapshot(collection(db,"pedidos"),(snap)=>{
 </div>
 
 <div class="card">
-<h2>Menú</h2>
-
-<button class="azul" onclick="addItem('Hamburguesa',2000)">🍔 Hamburguesa</button>
-<button class="azul" onclick="addItem('Pizza',2200)">🍕 Pizza</button>
-<button class="azul" onclick="addItem('Milanesa',2500)">🍗 Milanesa</button>
-<button class="azul" onclick="addItem('Gaseosa',800)">🥤 Gaseosa</button>
+<button class="azul" onclick="addItem('Hamburguesa',2000)">Hamburguesa</button>
+<button class="azul" onclick="addItem('Pizza',2200)">Pizza</button>
+<button class="azul" onclick="addItem('Gaseosa',800)">Gaseosa</button>
 </div>
 
 <div class="card">
-<h2>Pedido</h2>
-
 <ul id="lista"></ul>
 <p>Total: $<span id="total">0</span></p>
 
 <button class="verde" onclick="enviar()">Enviar a Cocina</button>
-<button class="naranja" onclick="cobrarMesa()">💰 Cobrar Mesa</button>
+<button class="naranja" onclick="cobrarMesa()">Cobrar</button>
 </div>
 
 </body>
